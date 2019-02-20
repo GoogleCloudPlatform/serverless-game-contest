@@ -1,5 +1,7 @@
 # Serverless Game Contest
 
+**This is not an officially supported Google product**
+
 This repository contains code that can be used as is or modified to run
 a programming contest where participants write game playing apps as
 functions as a service. It can also be the basis of an automated programming
