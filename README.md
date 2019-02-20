@@ -31,7 +31,7 @@ as Node.js or Go could be used.
 ## player
 
 Sample Python 3.7 code to play the "guess a number" game. The code can be
-hosted on any function as a service platform, such as Google Cloud Functions,
+run as a Cloud Function, or on other function as a service platforms
 or any web server that can accept HTTP requests over the Internet.
 
 ## questioners
@@ -48,10 +48,14 @@ run as Google Cloud Functions, triggered by a Pub/Sub topic.
 
 ## manager
 
-This Google App Engine Standard Python 3.7 program provides pages for
-contestants to submit the web addresses of their players for evaluation and
-scoring. It also displays current standings, and administrative features for
-initializing new contests.
+The /manager/appengine folder contains the App Engine Standard Python 3.7
+program that provides pages for contestants to submit the web addresses of
+their players for evaluation and scoring. Information about runs and scores
+are stored in Datastore, and are used to display current standings. This
+program also provides administrative features for initializing new contests.
+Access to this application can be restricted to selected, authenticated users
+with Identity-Aware Proxy.
 
-Questioners report scores either to this application, or to the function
-in this folder if the App Engine program is restricted to logged in users.
+Questioners report scores either to this application, or to the standalone
+cloud function application in the /manager/function folder if Identity-Aware
+Proxy is being used to restrict access to the App Engine program.
