@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <title>Contest Standings</title>
+</head>
+<body>
+  <h1>Contest Standings</h1>
+
+  <dl>
+    {% for trial in trials %}
+    <dt>Requested at {{ trial['timestamp'] }} by {{ trial['user'] }} for {{ trial['player_url'] }}</dt>
+    <dd>
+        Runs:<br/>
+        {% for run in trial['runs'] %}
+        Questioner: {{ run['questioner']}}, Outcome: {{ run['outcome'] }} in {{ run['moves'] }} moves. <br/>
+        {% endfor %}
+    </dd>
+    {% endfor %}
+  </dl>
+
+  <p>
+    <a href="/request-trial">Request a new contest run</a>
+  </p>
+
+</body>
+</html>

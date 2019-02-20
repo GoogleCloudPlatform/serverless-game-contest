@@ -1,0 +1,6 @@
+Flask==1.0.2
+google-cloud-datastore==1.7.3
+google-cloud-pubsub==0.39.1
+cryptography
+python-jose[cryptography]
+requests

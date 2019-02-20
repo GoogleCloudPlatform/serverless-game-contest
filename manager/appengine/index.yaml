@@ -1,0 +1,6 @@
+indexes:
+- kind: Result
+  ancestor: yes
+  properties:
+  - name: questioner
+    direction: desc
