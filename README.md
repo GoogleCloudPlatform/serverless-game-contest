@@ -7,6 +7,15 @@ a programming contest where participants write game playing apps as
 functions as a service. It can also be the basis of an automated programming
 assignment receiver and grading system.
 
+The code here demonstrates usage of several Google Cloud Platform products:
+
+* App Engine Standard for Python 3.7
+* Cloud Functions
+* Pub/Sub
+* Datastore
+* Logging
+* (Optional) Identity-Aware Proxy
+
 There are three parts to this repository:
 
 * */player* Example game playing apps
