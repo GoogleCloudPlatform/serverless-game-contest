@@ -18,7 +18,7 @@ import json
 import os
 import uuid
 
-from google.cloud import datastore
+from google.cloud import firestore
 from google.cloud import pubsub
 
 import auth
@@ -30,31 +30,21 @@ app = Flask(__name__)
 # Minimal UI - home page shows current results, link to request new player run
 @app.route('/', methods=['GET'])
 def echo_recent_results():
-    client = datastore.Client()
-    query = client.query(kind='Trial', order=['-timestamp'])
-    trials = [
-        {
-            'timestamp': entity['timestamp'].isoformat(),
-            'user': entity['user'],
-            'player_url': entity['player_url'],
-            'key': entity.key,
-            'runs': []
-        } for entity in query.fetch()
-    ]
+    results = []
 
-    for trial in trials:
-        query = client.query(
-            kind='Result', 
-            order=['-questioner'], 
-            ancestor=trial['key']
-        )
-        for entity in query.fetch():
-            trial['runs'].append({
-                'questioner': entity['questioner'],
-                'outcome': entity['outcome'],
-                'moves': entity['moves']
-            })
-    
+    trials = firestore.Client().collection('trials')
+    for trial in trials.order_by(
+            'timestamp', direction=firestore.Query.DESCENDING
+        ).stream():
+
+        trial_info = trial.to_dict()
+        trial_info['runs'] = []
+
+        for run in trial.collection('runs').order_by('questioner').stream():
+            trials_info['runs'].append(run.to_dict)
+
+        results.append(trial_info)
+
     page = render_template('index.html', trials=trials)
     return page
 
@@ -79,29 +69,12 @@ def start_trial():
     contest_round = str(uuid.uuid4())
     timestamp = datetime.utcnow()
 
-    # Remember the trial being requested
-    client = datastore.Client()
-    key = client.key('Trial', contest_round)
-    entity = datastore.Entity(key=key)
-    entity.update({
+    firestore.Client().collection('trials').add({
         'email': email,
         'user': user,
         'player_url': player_url,
         'timestamp': timestamp
-    })
-    client.put(entity)
-
-    # Determine the URL for reporting results. Unless Identity Aware Proxy is
-    # enabled to restrict access to the App Engine app, that URL can be served
-    # by this App Engine instance itself.
-    project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
-    result_url = 'https://{}.appspot.com/report-result'.format(project_id)
-
-    # If Identity Aware Proxy is activated, the questioner Cloud Functions will
-    # not be able to connect to this App Engine app. In that case, a separate
-    # Cloud Function will be used to receive and record scores. To enable that,
-    # fill in the Cloud Function's URL and uncomment the line below:
-    # result_url = 'report-cloud-function-url'
+        })
 
     # Request trial runs by publishing message to all questioners
     publisher = pubsub.PublisherClient()
@@ -118,42 +91,6 @@ def start_trial():
 
     # TODO: acknowledge to the user that the trial(s) are pending
     return redirect('/', code=302)
-
-
-# A questioner reports a result
-@app.route('/report-result', methods=['POST'])
-def save_result():
-    # All result reports should be in JSON form
-    result = request.get_json()
-    if result is None:
-        return 415  # Unsupported media type (not application/json)
-
-    # Reported result data in payload
-    contest_round = result['contest_round']
-    outcome = result['outcome']
-    moves = result['moves']
-    questioner = result['questioner']
-
-    # Look up contest_round random ID to be sure this is a genuine report
-    client = datastore.Client()
-    trial_key = client.key('Trial', contest_round)
-    trial_entity = client.get(trial_key)
-    if trial_entity is None:
-        return 404  # Not found - no such contest_round was ever asked for
-    
-    # Update results with new data
-    result_id = str(uuid.uuid4())
-    result_key = client.key('Result', result_id, parent=trial_key)
-    result_entity = datastore.Entity(key=result_key)
-    result_entity.update({
-        'questioner': questioner,
-        'outcome': outcome,
-        'moves': moves
-    })
-    client.put(result_entity)
-    
-    # Acknowledge a successful report
-    return 201  # Created (a new contest score entry)
 
 
 if __name__ == '__main__':
