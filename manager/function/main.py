@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-import json
-import os
-import uuid
-
-from google.cloud import datastore
-from google.cloud import pubsub
+from google.cloud import firestore
 
 
 def save_result(request):
@@ -30,24 +24,23 @@ def save_result(request):
     outcome = result['outcome']
     moves = result['moves']
     questioner = result['questioner']
+    secret = result['secret']
 
     # Look up contest_round random ID to be sure this is a genuine report
-    client = datastore.Client()
-    trial_key = client.key('Trial', contest_round)
-    trial_entity = client.get(trial_key)
-    if trial_entity is None:
-        return 404  # Not found - no such contest_round was ever asked for
-    
+    db = firestore.Client()
+    rounds = db.collection('rounds')
+
+    this_round = rounds.document(contest_round).get()
+    if not this_round.exists:
+        return '404'  # Not found - no such contest_round was ever asked for
+    if secret != this_round.to_dict().get('secret'):
+        return '403'  # Forbidden - they don't know the shared secret
+
     # Update results with new data
-    result_id = str(uuid.uuid4())
-    result_key = client.key('Result', result_id, parent=trial_key)
-    result_entity = datastore.Entity(key=result_key)
-    result_entity.update({
-        'questioner': questioner,
+    rounds.document(contest_round).collection('runs').add({
         'outcome': outcome,
         'moves': moves
-    })
-    client.put(result_entity)
-    
+    }, document_id=questioner)
+
     # Acknowledge a successful report
-    return 201  # Created (a new contest score entry)
+    return '201'  # Created (a new contest score entry)
