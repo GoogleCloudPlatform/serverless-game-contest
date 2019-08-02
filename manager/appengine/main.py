@@ -32,32 +32,32 @@ app = Flask(__name__)
 def echo_recent_results():
     results = []
 
-    trials = firestore.Client().collection('trials')
-    for trial in trials.order_by(
+    rounds = firestore.Client().collection('rounds')
+    for contest_round in rounds.order_by(
             'timestamp', direction=firestore.Query.DESCENDING
         ).stream():
 
-        trial_info = trial.to_dict()
-        trial_info['runs'] = []
+        round = contest_round.to_dict()
+        round['runs'] = []
 
-        for run in trial.collection('runs').order_by('questioner').stream():
-            trials_info['runs'].append(run.to_dict)
+        for run in round.collection('runs').order_by('questioner').stream():
+            round['runs'].append(run.to_dict)
 
-        results.append(trial_info)
+        results.append(round)
 
-    page = render_template('index.html', trials=trials)
+    page = render_template('index.html', rounds=results)
     return page
 
 
 # User navigates to a page to ask for a player to be questioned
-@app.route('/request-trial', methods=['GET'])
-def trial_form():
-    return render_template('trial_form.html')
+@app.route('/request-round', methods=['GET'])
+def round_form():
+    return render_template('round_form.html')
 
 
 # User asks for a player to be run by questioner(s)
-@app.route('/request-trial', methods=['POST'])
-def start_trial():
+@app.route('/request-round', methods=['POST'])
+def start_round():
     # Get the real user's email via Cloud IAP, if available
     email = auth.email()
 
@@ -69,7 +69,7 @@ def start_trial():
     contest_round = str(uuid.uuid4())
     timestamp = datetime.utcnow()
 
-    firestore.Client().collection('trials').add({
+    firestore.Client().collection('rounds').add({
         'email': email,
         'user': user,
         'player_url': player_url,
