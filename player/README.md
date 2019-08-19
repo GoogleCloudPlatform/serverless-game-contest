@@ -1,12 +1,10 @@
 ---
 summary: In this tutorial you will create a game contest player, test it, and make it available at a public URL
-feedback link: https://github.com/GoogleCloudPlatform/serverless-game-contest/issues
-
 ---
 
 # The Player
 
-[Codelab Feedback](https://github.com/GoogleCloudPlatform/serverless-game-contest/issues)
+[Feedback](https://github.com/GoogleCloudPlatform/serverless-game-contest/issues)
 
 
 ## Introduction
