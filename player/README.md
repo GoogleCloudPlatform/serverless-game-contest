@@ -1,22 +1,15 @@
 ---
-id: serverless-game-contest
 summary: In this tutorial you will create a game contest player, test it, and make it available at a public URL
-status: [draft]
-authors: engelke
-categories: Web
-tags: app engine,cloud function,firestore,pubsub,serverless,web
-feedback link: github.com/GoogleCloudPlatform/serverless-game-contest/issues
+feedback link: https://github.com/GoogleCloudPlatform/serverless-game-contest/issues
 
 ---
 
 # The Player
 
-[Codelab Feedback](github.com/GoogleCloudPlatform/serverless-game-contest/issues)
+[Codelab Feedback](https://github.com/GoogleCloudPlatform/serverless-game-contest/issues)
 
 
 ## Introduction
-Duration: 02:00
-
 
 Contestants in the example programming contest create their solutions as web services that make one move at a time. Each move is requested by an external entity sending the service a request with a JSON body specifying the state of the game, and the player service responds with the JSON representation of a single move.
 
@@ -59,7 +52,7 @@ In this tutorial, you're going to build a web service implemented as a Cloud Fun
 * How to write and deploy a simple Cloud Function using Python 3.7
 * How to test the Cloud Function
 
-### W**hat you'll need**
+### **What you'll need**
 
 * A modern web browser such as  [Chrome](https://www.google.com/chrome/browser/).
 * Basic knowledge of the Python programming language
@@ -71,7 +64,7 @@ Duration: 03:00
 
 All software deployed on GCP will be part of a GCP Project. You can use the same project as for other components of the game playing system, or you can create a new project at  [console.cloud.google.com](https://console.cloud.google.com/).
 
-You will work in the Cloud Shell command line environment. Start by opening that environment and fetching the sample code to it.
+You will work in the Cloud Shell command line environment. Start by opening that environment.
 
 ### **Launch the Console and Cloud Shell**
 
@@ -79,10 +72,8 @@ Open the Cloud Console at  [console.cloud.google.com](https://console.cloud.goog
 
 
 ## Step 1 - Create a Cloud Function
-Duration: 10:00
 
-
-You create a Cloud Function triggered by HTTP requests.
+You will create a Cloud Function triggered by HTTP requests.
 
 1. Using the menu in the top left corner of the console, select **Cloud Functions** from the **Compute** section.
 2. If this is the first time you are using Cloud Functions in this project, you will see a message that the Cloud Functions API is not enabled. Click the **Enable API** button to proceed.
@@ -125,8 +116,6 @@ Fill in the name of the **Function to execute** as **make_guess**, and click the
 
 
 ## Step 2 - Test the function
-
-
 
 We are now ready to test the function. Click the function name to open the **Function details** page, and then click the **Testing** tab to start.
 
