@@ -34,6 +34,7 @@
         invoked, used to make sure that imposters don't post false results
 """
 
+import json
 from google.cloud import firestore
 
 
@@ -65,4 +66,4 @@ def save_result(request):
     })
 
     # Acknowledge a successful report
-    return '201'  # Created (a new contest score entry)
+    return '201'  # Created (a new contest run entry)

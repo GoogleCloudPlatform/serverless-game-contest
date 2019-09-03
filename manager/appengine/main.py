@@ -27,6 +27,26 @@ import auth
 app = Flask(__name__)
 
 
+def get_nickname():
+    user_id = request.headers.get('x-goog-authenticated-user-id')
+
+    nicknames = firestore.Client().collection('nicknames')
+    user = nicknames.document(user_id).get()
+
+    if user.exists:
+        return user.to_dict().get('nickname')
+    else:
+        return None
+
+
+def set_nickname(nickname):
+    user_id = request.headers.get('x-goog-authenticated-user-id')
+
+    firestore.Client().collection('nicknames').add({
+        'nickname': nickname
+        }, document_id=user_id)
+
+
 # Minimal UI - home page shows current results, link to request new player run
 @app.route('/', methods=['GET'])
 def echo_recent_results():
@@ -38,10 +58,11 @@ def echo_recent_results():
         ).stream():
 
         round = contest_round.to_dict()
+        round['contest_id'] = round.id
         round['runs'] = []
 
         for run in round.collection('runs').order_by('questioner').stream():
-            round['runs'].append(run.to_dict)
+            round['runs'].append(run.to_dict())
 
         results.append(round)
 
@@ -52,29 +73,38 @@ def echo_recent_results():
 # User navigates to a page to ask for a player to be questioned
 @app.route('/request-round', methods=['GET'])
 def round_form():
-    return render_template('round_form.html')
+    nickname = get_nickname()
+    if nickname is None:
+        value = ''
+        attributes = ''
+    else:
+        value = nickname
+        attributes = "readonly disabled"
+
+    return render_template(
+        'round_form.html',
+        value=value, attributes=attributes
+    )
 
 
 # User asks for a player to be run by questioner(s)
 @app.route('/request-round', methods=['POST'])
 def start_round():
-    # Get the real user's email via Cloud IAP, if available
-    email = auth.email()
+    nickname = get_nickname()
 
-    # Information about requested trial submitted by user
-    user = request.form['user']
-    player_url = request.form['player_url']
+    if nickname is None:  # Never seen this user, accept submitted nickname
+        nickname = request.form['nickname']
+        set_nickname(nickname)
 
     # Internal identifiers for tracking results
     contest_round = str(uuid.uuid4())
+    secret = str(uuid.uuid4())
     timestamp = datetime.utcnow()
 
     firestore.Client().collection('rounds').add({
-        'email': email,
-        'user': user,
-        'player_url': player_url,
-        'timestamp': timestamp
-        })
+        'nickname': nickname,
+        'secret': secret
+        }, document_id=contest_round)
 
     # Request trial runs by publishing message to all questioners
     publisher = pubsub.PublisherClient()
@@ -85,11 +115,11 @@ def start_round():
     payload = {
         'contest_round': contest_round,
         'player_url': player_url,
-        'result_url': result_url
+        'result_url': result_url,
+        'secret': secret
     }
     publisher.publish(topic_name, json.dumps(payload).encode())
 
-    # TODO: acknowledge to the user that the trial(s) are pending
     return redirect('/', code=302)
 
 

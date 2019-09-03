@@ -8,13 +8,13 @@
 
   <form action="/request-round" method="post">
     <div>
-      <label for="user">Your name:</label>
-      <input type="text" id="user" name="user">
+      <label for="user">Your nickname:</label>
+      <input type="text" id="nickname" name="nickname" value="{{ value }}" {{ attributes }} />
     </div>
    
     <div>
       <label for="player_url">Player function URL:</label>
-      <input type="text" id="player_url" name="player_url">
+      <input type="text" id="player_url" name="player_url" />
     </div>
 
     <button type="submit">Request round</button>
