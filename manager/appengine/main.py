@@ -21,8 +21,6 @@ import uuid
 from google.cloud import firestore
 from google.cloud import pubsub
 
-import auth
-
 
 app = Flask(__name__)
 
