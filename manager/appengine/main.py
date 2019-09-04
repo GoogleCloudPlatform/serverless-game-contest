@@ -21,12 +21,16 @@ import uuid
 from google.cloud import firestore
 from google.cloud import pubsub
 
+RESULT_URL = 'https://your-manager-function-url-goes-here'
+
 
 app = Flask(__name__)
 
 
 def get_nickname():
     user_id = request.headers.get('x-goog-authenticated-user-id')
+    if user_id is None:
+        return None
 
     nicknames = firestore.Client().collection('nicknames')
     user = nicknames.document(user_id).get()
@@ -39,6 +43,8 @@ def get_nickname():
 
 def set_nickname(nickname):
     user_id = request.headers.get('x-goog-authenticated-user-id')
+    if user_id is None:
+        return
 
     firestore.Client().collection('nicknames').add({
         'nickname': nickname
@@ -56,7 +62,7 @@ def echo_recent_results():
         ).stream():
 
         round = contest_round.to_dict()
-        round['contest_id'] = round.id
+        round['contest_round'] = round.id
         round['runs'] = []
 
         for run in round.collection('runs').order_by('questioner').stream():
@@ -88,11 +94,18 @@ def round_form():
 # User asks for a player to be run by questioner(s)
 @app.route('/request-round', methods=['POST'])
 def start_round():
+    player_url = request.form.get('player_url')
+    if player_url is None:
+        return 'Bad Request: missing player_url', 400
+
     nickname = get_nickname()
 
     if nickname is None:  # Never seen this user, accept submitted nickname
-        nickname = request.form['nickname']
-        set_nickname(nickname)
+        nickname = request.form.get('nickname')
+        if nickname is not None:
+            set_nickname(nickname)
+        else:
+            return 'Bad Request: missing nickname', 400
 
     # Internal identifiers for tracking results
     contest_round = str(uuid.uuid4())
@@ -113,7 +126,7 @@ def start_round():
     payload = {
         'contest_round': contest_round,
         'player_url': player_url,
-        'result_url': result_url,
+        'result_url': RESULT_URL,
         'secret': secret
     }
     publisher.publish(topic_name, json.dumps(payload).encode())
