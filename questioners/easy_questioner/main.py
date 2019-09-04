@@ -22,13 +22,12 @@ TARGET = 7
 MAX_GUESSES = 20
 QUESTIONER = 'easy-questioner'
 
-CONTEST_ROUND = None
 
-
-def report_score(url, outcome, moves):
+def report_score(url, outcome, moves, contest_round, secret):
     score = {
         'questioner': QUESTIONER,
-        'contest_round': CONTEST_ROUND,
+        'contest_round': contest_round,
+        'secret': secret,
         'outcome': outcome,
         'moves': moves
     }
@@ -68,12 +67,12 @@ def play_game(url):
 
 
 def question_player(event, context):
-    global CONTEST_ROUND
-
     message = json.loads(base64.b64decode(event['data']).decode('utf-8'))
+    
     player_url = message['player_url']
     result_url = message['result_url']
-    CONTEST_ROUND = message['contest_round']
+    contest_round = message['contest_round']
+    secret = message['secret']
 
     outcome, moves = play_game(player_url)
-    report_score(result_url, outcome, moves)
+    report_score(result_url, outcome, moves, contest_round, secret)

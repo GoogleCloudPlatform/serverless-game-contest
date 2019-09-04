@@ -18,90 +18,104 @@ import json
 import os
 import uuid
 
-from google.cloud import datastore
+from google.cloud import firestore
 from google.cloud import pubsub
 
-import auth
+RESULT_URL = 'https://your-manager-function-url-goes-here'
 
 
 app = Flask(__name__)
 
 
+def get_nickname():
+    user_id = request.headers.get('x-goog-authenticated-user-id')
+    if user_id is None:
+        return None
+
+    nicknames = firestore.Client().collection('nicknames')
+    user = nicknames.document(user_id).get()
+
+    if user.exists:
+        return user.to_dict().get('nickname')
+    else:
+        return None
+
+
+def set_nickname(nickname):
+    user_id = request.headers.get('x-goog-authenticated-user-id')
+    if user_id is None:
+        return
+
+    firestore.Client().collection('nicknames').add({
+        'nickname': nickname
+        }, document_id=user_id)
+
+
 # Minimal UI - home page shows current results, link to request new player run
 @app.route('/', methods=['GET'])
 def echo_recent_results():
-    client = datastore.Client()
-    query = client.query(kind='Trial', order=['-timestamp'])
-    trials = [
-        {
-            'timestamp': entity['timestamp'].isoformat(),
-            'user': entity['user'],
-            'player_url': entity['player_url'],
-            'key': entity.key,
-            'runs': []
-        } for entity in query.fetch()
-    ]
+    results = []
 
-    for trial in trials:
-        query = client.query(
-            kind='Result', 
-            order=['-questioner'], 
-            ancestor=trial['key']
-        )
-        for entity in query.fetch():
-            trial['runs'].append({
-                'questioner': entity['questioner'],
-                'outcome': entity['outcome'],
-                'moves': entity['moves']
-            })
-    
-    page = render_template('index.html', trials=trials)
+    rounds = firestore.Client().collection('rounds')
+    for contest_round in rounds.order_by(
+            'timestamp', direction=firestore.Query.DESCENDING
+        ).stream():
+
+        round = contest_round.to_dict()
+        round['contest_round'] = round.id
+        round['runs'] = []
+
+        for run in round.collection('runs').order_by('questioner').stream():
+            round['runs'].append(run.to_dict())
+
+        results.append(round)
+
+    page = render_template('index.html', rounds=results)
     return page
 
 
 # User navigates to a page to ask for a player to be questioned
-@app.route('/request-trial', methods=['GET'])
-def trial_form():
-    return render_template('trial_form.html')
+@app.route('/request-round', methods=['GET'])
+def round_form():
+    nickname = get_nickname()
+    if nickname is None:
+        value = ''
+        attributes = ''
+    else:
+        value = nickname
+        attributes = "readonly disabled"
+
+    return render_template(
+        'round_form.html',
+        value=value, attributes=attributes
+    )
 
 
 # User asks for a player to be run by questioner(s)
-@app.route('/request-trial', methods=['POST'])
-def start_trial():
-    # Get the real user's email via Cloud IAP, if available
-    email = auth.email()
+@app.route('/request-round', methods=['POST'])
+def start_round():
+    player_url = request.form.get('player_url')
+    if player_url is None:
+        return 'Bad Request: missing player_url', 400
 
-    # Information about requested trial submitted by user
-    user = request.form['user']
-    player_url = request.form['player_url']
+    nickname = get_nickname()
+
+    if nickname is None:  # Never seen this user, accept submitted nickname
+        nickname = request.form.get('nickname')
+        if nickname is not None:
+            set_nickname(nickname)
+        else:
+            return 'Bad Request: missing nickname', 400
 
     # Internal identifiers for tracking results
     contest_round = str(uuid.uuid4())
+    secret = str(uuid.uuid4())
     timestamp = datetime.utcnow()
 
-    # Remember the trial being requested
-    client = datastore.Client()
-    key = client.key('Trial', contest_round)
-    entity = datastore.Entity(key=key)
-    entity.update({
-        'email': email,
-        'user': user,
-        'player_url': player_url,
-        'timestamp': timestamp
-    })
-    client.put(entity)
-
-    # Determine the URL for reporting results. Unless Identity Aware Proxy is
-    # enabled to restrict access to the App Engine app, that URL can be served
-    # by this App Engine instance itself.
-    project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
-    result_url = 'https://{}.appspot.com/report-result'.format(project_id)
-
-    # If Identity Aware Proxy is activated, the questioner Cloud Functions will
-    # not be able to connect to this App Engine app. In that case, a separate
-    # Cloud Function will be used to receive and record scores. To enable that,
-    # fill in the Cloud Function's URL and uncomment the line below:
-    # result_url = 'report-cloud-function-url'
+    firestore.Client().collection('rounds').add({
+        'nickname': nickname,
+        'secret': secret
+        }, document_id=contest_round)
 
     # Request trial runs by publishing message to all questioners
     publisher = pubsub.PublisherClient()
@@ -112,48 +126,12 @@ def start_trial():
     payload = {
         'contest_round': contest_round,
         'player_url': player_url,
-        'result_url': result_url
+        'result_url': RESULT_URL,
+        'secret': secret
     }
     publisher.publish(topic_name, json.dumps(payload).encode())
 
-    # TODO: acknowledge to the user that the trial(s) are pending
     return redirect('/', code=302)
-
-
-# A questioner reports a result
-@app.route('/report-result', methods=['POST'])
-def save_result():
-    # All result reports should be in JSON form
-    result = request.get_json()
-    if result is None:
-        return 415  # Unsupported media type (not application/json)
-
-    # Reported result data in payload
-    contest_round = result['contest_round']
-    outcome = result['outcome']
-    moves = result['moves']
-    questioner = result['questioner']
-
-    # Look up contest_round random ID to be sure this is a genuine report
-    client = datastore.Client()
-    trial_key = client.key('Trial', contest_round)
-    trial_entity = client.get(trial_key)
-    if trial_entity is None:
-        return 404  # Not found - no such contest_round was ever asked for
-    
-    # Update results with new data
-    result_id = str(uuid.uuid4())
-    result_key = client.key('Result', result_id, parent=trial_key)
-    result_entity = datastore.Entity(key=result_key)
-    result_entity.update({
-        'questioner': questioner,
-        'outcome': outcome,
-        'moves': moves
-    })
-    client.put(result_entity)
-    
-    # Acknowledge a successful report
-    return 201  # Created (a new contest score entry)
 
 
 if __name__ == '__main__':

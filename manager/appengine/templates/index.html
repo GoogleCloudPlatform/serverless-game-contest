@@ -7,11 +7,11 @@
   <h1>Contest Standings</h1>
 
   <dl>
-    {% for trial in trials %}
-    <dt>Requested at {{ trial['timestamp'] }} by {{ trial['user'] }} for {{ trial['player_url'] }}</dt>
+    {% for round in rounds %}
+    <dt>Requested at {{ round['timestamp'] }} by {{ round['user'] }} for {{ round['player_url'] }}</dt>
     <dd>
         Runs:<br/>
-        {% for run in trial['runs'] %}
+        {% for run in round['runs'] %}
         Questioner: {{ run['questioner']}}, Outcome: {{ run['outcome'] }} in {{ run['moves'] }} moves. <br/>
         {% endfor %}
     </dd>
@@ -19,7 +19,7 @@
   </dl>
 
   <p>
-    <a href="/request-trial">Request a new contest run</a>
+    <a href="/request-round">Request a new contest round</a>
   </p>
 
 </body>
