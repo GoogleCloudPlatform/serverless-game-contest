@@ -65,7 +65,7 @@ def echo_recent_results():
         round['contest_round'] = contest_round.id
         round['runs'] = []
 
-        for run in contest_round.collection('runs').reference.order_by('questioner').stream():
+        for run in contest_round.reference.collection('runs').order_by('questioner').stream():
             round['runs'].append(run.to_dict())
 
         results.append(round)
