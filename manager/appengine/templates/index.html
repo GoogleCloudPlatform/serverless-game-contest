@@ -8,7 +8,7 @@
 
   <dl>
     {% for round in rounds %}
-    <dt>Requested at {{ round['timestamp'] }} by {{ round['user'] }} for {{ round['player_url'] }}</dt>
+    <dt>Requested at {{ round['timestamp'] }} by {{ round['nickname'] }} for {{ round['player_url'] }}</dt>
     <dd>
         Runs:<br/>
         {% for run in round['runs'] %}

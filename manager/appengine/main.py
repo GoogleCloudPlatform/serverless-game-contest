@@ -114,6 +114,7 @@ def start_round():
 
     firestore.Client().collection('rounds').add({
         'nickname': nickname,
+        'player_url': player_url,
         'secret': secret,
         'timestamp': timestamp,
         }, document_id=contest_round)
