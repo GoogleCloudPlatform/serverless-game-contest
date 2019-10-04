@@ -12,7 +12,7 @@ The code here demonstrates usage of several Google Cloud Platform products:
 * App Engine Standard for Python 3.7
 * Cloud Functions
 * Pub/Sub
-* Datastore
+* Firestore
 * Logging
 * (Optional) Identity-Aware Proxy
 
