@@ -18,7 +18,7 @@ import requests
 
 MINIMUM = 0
 MAXIMUM = 1000000000
-TARGET = 3
+TARGET = 1000000
 MAX_GUESSES = 100
 QUESTIONER = 'hard-questioner'
 
