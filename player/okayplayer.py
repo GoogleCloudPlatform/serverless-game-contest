@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,17 @@ import json
 
 def make_guess(request):
     game = request.get_json()
+    guess = game['minimum']
 
-    min = game['minimum']
-    max = game['maximum']
-    guess = (min + max) // 2
-
+    for move in game['history']:
+        historic_guess = move['guess']
+        
+        if move['result'] == 'lower':
+            if guess >= historic_guess:
+                guess = historic_guess - 1
+                
+        if move['result'] == 'higher':
+            if guess <= historic_guess:
+                guess = historic_guess + 1
+                
     return json.dumps(guess)
